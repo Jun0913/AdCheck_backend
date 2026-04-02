@@ -8,7 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -26,16 +27,20 @@ public class HistoryController {
 
     private final AnalysisResultRepository analysisResultRepository;
 
-    /**
-     * 내 분석 이력 목록
-     * GET /history?page=0&size=10
-     */
+    private User getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof User user) {
+            return user;
+        }
+        return null;
+    }
+
     @GetMapping
     public ResponseEntity<?> getMyHistory(
-            @AuthenticationPrincipal User user,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+        User user = getCurrentUser();
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("error", "로그인이 필요합니다."));
         }
@@ -44,15 +49,9 @@ public class HistoryController {
         return ResponseEntity.ok(result);
     }
 
-    /**
-     * 분석 이력 단건 조회
-     * GET /history/{id}
-     */
     @GetMapping("/{id}")
-    public ResponseEntity<?> getHistoryById(
-            @PathVariable Long id,
-            @AuthenticationPrincipal User user
-    ) {
+    public ResponseEntity<?> getHistoryById(@PathVariable Long id) {
+        User user = getCurrentUser();
         if (user == null) {
             return ResponseEntity.status(401).body(Map.of("error", "로그인이 필요합니다."));
         }

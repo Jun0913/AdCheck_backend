@@ -6,7 +6,8 @@ import com.adcheck.backend.service.AnalysisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -30,17 +31,22 @@ public class AnalysisController {
 
     private final AnalysisService analysisService;
 
+    private User getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof User user) {
+            return user;
+        }
+        return null;
+    }
+
     @PostMapping("/analyze/text")
-    public ResponseEntity<?> analyzeText(
-            @RequestBody Map<String, String> body,
-            @AuthenticationPrincipal User user
-    ) {
+    public ResponseEntity<?> analyzeText(@RequestBody Map<String, String> body) {
         String content = body.get("content");
         if (content == null || content.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "content가 비어있습니다."));
         }
         try {
-            AnalyzeResponseDto result = analysisService.analyzeText("text", content, user);
+            AnalyzeResponseDto result = analysisService.analyzeText("text", content, getCurrentUser());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("텍스트 분석 실패: {}", e.getMessage());
@@ -50,16 +56,13 @@ public class AnalysisController {
     }
 
     @PostMapping("/analyze/url")
-    public ResponseEntity<?> analyzeUrl(
-            @RequestBody Map<String, String> body,
-            @AuthenticationPrincipal User user
-    ) {
+    public ResponseEntity<?> analyzeUrl(@RequestBody Map<String, String> body) {
         String content = body.get("content");
         if (content == null || content.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "content가 비어있습니다."));
         }
         try {
-            AnalyzeResponseDto result = analysisService.analyzeText("url", content, user);
+            AnalyzeResponseDto result = analysisService.analyzeText("url", content, getCurrentUser());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("URL 분석 실패: {}", e.getMessage());
@@ -69,15 +72,12 @@ public class AnalysisController {
     }
 
     @PostMapping("/analyze/image")
-    public ResponseEntity<?> analyzeImage(
-            @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal User user
-    ) {
+    public ResponseEntity<?> analyzeImage(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "파일이 비어있습니다."));
         }
         try {
-            AnalyzeResponseDto result = analysisService.analyzeImage(file, user);
+            AnalyzeResponseDto result = analysisService.analyzeImage(file, getCurrentUser());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("이미지 분석 실패: {}", e.getMessage());
