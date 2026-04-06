@@ -1,6 +1,8 @@
 package com.adcheck.backend.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -29,6 +31,10 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Bean
     public ObjectMapper objectMapper() {
-        return new ObjectMapper();
+        // Java 8 date/time types need the JSR-310 module so history createdAt values
+        // are serialized as ISO-8601 strings that the frontend can parse reliably.
+        return new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
     }
 }

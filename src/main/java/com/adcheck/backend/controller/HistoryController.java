@@ -1,6 +1,6 @@
 package com.adcheck.backend.controller;
 
-import com.adcheck.backend.entity.AnalysisResult;
+import com.adcheck.backend.dto.HistoryItemDto;
 import com.adcheck.backend.entity.User;
 import com.adcheck.backend.repository.AnalysisResultRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 /**
- * 분석 이력 조회 엔드포인트 (로그인 필요)
+ * 분석 이력 조회 엔드포인트(로그인 필요)
  *
- * GET /history          — 내 분석 이력 (최신순, 페이징)
- * GET /history/{id}     — 이력 단건 조회
+ * GET /history          내 분석 이력 페이징 조회
+ * GET /history/{id}     특정 이력 단건 조회
  */
 @RestController
 @RequestMapping("/history")
@@ -45,7 +45,9 @@ public class HistoryController {
             return ResponseEntity.status(401).body(Map.of("error", "로그인이 필요합니다."));
         }
         PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        Page<AnalysisResult> result = analysisResultRepository.findByUserId(user.getId(), pageable);
+        Page<HistoryItemDto> result = analysisResultRepository
+                .findByUserId(user.getId(), pageable)
+                .map(HistoryItemDto::fromEntity);
         return ResponseEntity.ok(result);
     }
 
@@ -57,6 +59,7 @@ public class HistoryController {
         }
         return analysisResultRepository.findById(id)
                 .filter(r -> r.getUser() != null && r.getUser().getId().equals(user.getId()))
+                .map(HistoryItemDto::fromEntity)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
