@@ -7,6 +7,8 @@ import com.adcheck.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,7 +49,18 @@ public class UserController {
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDto dto) {
         try {
             LoginResponseDto response = userService.login(dto);
-            return ResponseEntity.ok(response);
+            // 편의: 토큰을 쿠키로도 내려줘서 프런트가 헤더를 못 붙이더라도 인증이 유지되도록 함
+            ResponseCookie tokenCookie = ResponseCookie.from("token", response.getToken())
+                    .httpOnly(true)
+                    .secure(true)          // HTTPS 사용 시에만 전송
+                    .sameSite("Lax")
+                    .path("/")
+                    .maxAge(60L * 60 * 24 * 7) // 7일
+                    .build();
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.SET_COOKIE, tokenCookie.toString())
+                    .body(response);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
         }

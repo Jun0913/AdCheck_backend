@@ -54,10 +54,35 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     private String resolveToken(HttpServletRequest request) {
+        // 1) 표준 Authorization 헤더 우선
         String bearer = request.getHeader("Authorization");
-        if (StringUtils.hasText(bearer) && bearer.startsWith("Bearer ")) {
-            return bearer.substring(7);
+        if (StringUtils.hasText(bearer)) {
+            if (bearer.startsWith("Bearer ")) {
+                return bearer.substring(7);
+            }
+            // 프런트가 접두어 없이 보낸 경우도 허용
+            return bearer;
         }
+
+        // 2) 쿠키(token / Authorization)에서도 찾아서 허용
+        if (request.getCookies() != null) {
+            for (var cookie : request.getCookies()) {
+                if ("token".equalsIgnoreCase(cookie.getName())
+                        || "Authorization".equalsIgnoreCase(cookie.getName())) {
+                    String value = cookie.getValue();
+                    if (StringUtils.hasText(value)) {
+                        return value.startsWith("Bearer ") ? value.substring(7) : value;
+                    }
+                }
+            }
+        }
+
+        // 3) 쿼리스트링 ?token=... 도 최후 수단으로 허용 (모바일/테스트 편의)
+        String paramToken = request.getParameter("token");
+        if (StringUtils.hasText(paramToken)) {
+            return paramToken.startsWith("Bearer ") ? paramToken.substring(7) : paramToken;
+        }
+
         return null;
     }
 }
