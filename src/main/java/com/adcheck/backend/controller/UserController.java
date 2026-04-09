@@ -1,8 +1,8 @@
 package com.adcheck.backend.controller;
 
-import com.adcheck.backend.dto.LoginRequestDto;
-import com.adcheck.backend.dto.LoginResponseDto;
-import com.adcheck.backend.dto.RegisterRequestDto;
+import com.adcheck.backend.dto.*;
+import com.adcheck.backend.entity.User;
+import com.adcheck.backend.service.EmailVerificationService;
 import com.adcheck.backend.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,27 +10,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-/**
- * 회원 관련 엔드포인트
- *
- * POST /register  — 회원가입
- * POST /login     — 로그인 → JWT 반환
- */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
 public class UserController {
 
     private final UserService userService;
+    private final EmailVerificationService emailVerificationService;
 
-    /**
-     * 회원가입
-     * Body: { "email": "...", "password": "...", "nickname": "..." }
-     */
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequestDto dto) {
         try {
@@ -41,21 +35,16 @@ public class UserController {
         }
     }
 
-    /**
-     * 로그인
-     * Body: { "email": "...", "password": "..." }
-     */
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDto dto) {
         try {
             LoginResponseDto response = userService.login(dto);
-            // 편의: 토큰을 쿠키로도 내려줘서 프런트가 헤더를 못 붙이더라도 인증이 유지되도록 함
             ResponseCookie tokenCookie = ResponseCookie.from("token", response.getToken())
                     .httpOnly(true)
-                    .secure(true)          // HTTPS 사용 시에만 전송
+                    .secure(true)
                     .sameSite("Lax")
                     .path("/")
-                    .maxAge(60L * 60 * 24 * 7) // 7일
+                    .maxAge(60L * 60 * 24 * 7)
                     .build();
 
             return ResponseEntity.ok()
@@ -65,4 +54,44 @@ public class UserController {
             return ResponseEntity.status(401).body(Map.of("error", e.getMessage()));
         }
     }
+
+    @PostMapping("/password/change")
+    public ResponseEntity<?> changePassword(@AuthenticationPrincipal User user,
+                                            @Valid @RequestBody ChangePasswordRequestDto dto) {
+        if (user == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "인증이 필요합니다."));
+        }
+
+        try {
+            userService.changePassword(user, dto.getCurrentPassword(), dto.getNewPassword());
+            return ResponseEntity.ok(Map.of("message", "비밀번호가 변경되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/email/send-code")
+    public ResponseEntity<?> sendVerificationCode(@Valid @RequestBody EmailVerificationRequestDto dto) {
+        try {
+            emailVerificationService.sendVerificationCode(dto.getEmail());
+            return ResponseEntity.ok(Map.of(
+                    "message", "인증 코드가 이메일로 전송되었습니다.",
+                    "email", dto.getEmail()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/email/verify-code")
+    public ResponseEntity<?> verifyCode(@Valid @RequestBody VerifyCodeRequestDto dto) {
+        try {
+            emailVerificationService.verifyCode(dto.getEmail(), dto.getCode());
+            return ResponseEntity.ok(Map.of("message", "이메일 인증이 완료되었습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
 }
+
+
