@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 
 @Configuration
 @EnableWebSecurity
@@ -26,7 +27,6 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
-            // H2 콘솔은 iframe을 사용하므로 frameOptions 허용
             .headers(headers ->
                 headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
             )
@@ -35,15 +35,20 @@ public class SecurityConfig {
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/register", "/login").permitAll()
+                .requestMatchers("/email/send-code", "/email/verify-code").permitAll()
                 .requestMatchers("/analyze/**").permitAll()
                 .requestMatchers("/health").permitAll()
-                .requestMatchers("/h2-console/**").permitAll()  // H2 콘솔 허용
+                .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/history/**").authenticated()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(
                 new JwtFilter(jwtUtil, userRepository),
                 UsernamePasswordAuthenticationFilter.class
+            )
+            .exceptionHandling(ex -> ex
+                // 인증 안 된 요청은 401을 반환하도록 지정
+                .authenticationEntryPoint(new HttpStatusEntryPoint(org.springframework.http.HttpStatus.UNAUTHORIZED))
             );
 
         return http.build();
