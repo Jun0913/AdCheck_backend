@@ -1,188 +1,110 @@
-# 딱 걸렸어! — API 명세서
-**FastAPI 분석 서버 (Python) ↔ Spring Boot 백엔드 (Java) ↔ React 프론트엔드 연동용**
+﻿# ADCheck Spring Boot API 명세서
+
+Base URL: `http://localhost:8080`
+응답 포맷: JSON(UTF-8)
+인증 방식: JWT (Authorization: Bearer <token> 또는 token 쿠키)
 
 ---
-
-## 기본 정보
-
-| 항목 | 값 |
-|---|---|
-| Spring Boot 서버 | `http://localhost:8080` |
-| FastAPI 분석 서버 | `http://localhost:8000` |
-| 데이터 형식 | JSON (UTF-8) |
-| 인증 방식 | 없음 (내부 통신) |
-
----
-
-## 의심도 레벨
-
-| 값 | 설명 |
-|---|---|
-| `"정상"` | 허위·과장 표현 없음 |
-| `"주의"` | 과장 가능성 있는 표현 포함 |
-| `"의심"` | 허위·과장 광고 의심 표현 포함 |
-
----
-
-## [프론트 → Spring Boot] API 목록
-
----
-
-### 1. 서버 상태 확인
-
-```
-GET /health
-```
-
-**응답**
+## 공통 에러
 ```json
-{
-  "status": "ok",
-  "service": "딱 걸렸어! Spring Boot 서버",
-  "python_server": "ok"
-}
+{ "error": "에러 메시지" }
 ```
 
 ---
+## 헬스체크
+- `GET /health`
+  - 서비스 및 Python 연동 상태 확인
 
-### 2. 텍스트 분석
+---
+## 사용자
 
-```
-POST /analyze/text
-Content-Type: application/json
-```
-
-**요청**
+### 회원가입 (이메일 인증 완료 필수)
+- `POST /register`
+- Body
 ```json
-{
-  "content": "분석할 광고 문구 텍스트"
-}
+{ "email": "user@example.com", "password": "secret123", "nickname": "닉네임" }
 ```
+- 200: `{ "message": "회원가입이 완료되었습니다." }`
+- 400: `{ "error": "이메일 인증을 완료한 뒤 회원가입할 수 있습니다." }`
+- 409: `{ "error": "이미 사용 중인 이메일입니다." }`
 
-**응답**
+### 로그인
+- `POST /login`
+- Body
 ```json
-{
-  "original_text": "입력된 원본 텍스트",
-  "overall_suspicion_level": "의심",
-  "overall_score": 0.85,
-  "sentence_results": [
-    {
-      "sentence": "이 크림은 아토피를 치료합니다.",
-      "suspicion_level": "의심",
-      "matched_keywords": ["치료", "아토피"],
-      "reason": "의약품으로 오인될 수 있는 표현이 포함되어 있습니다."
-    }
-  ],
-  "summary": "총 2개 문장 중 1개에서 허위·과장 가능성이 높은 표현이 감지되었습니다."
-}
+{ "email": "user@example.com", "password": "secret123" }
 ```
-
----
-
-### 3. URL 분석
-
-```
-POST /analyze/url
-Content-Type: application/json
-```
-
-**요청**
+- 200: 쿠키(`token`, httpOnly, secure) 설정 + 바디
 ```json
-{
-  "content": "https://example.com/product"
-}
+{ "token": "<jwt>", "nickname": "닉네임" }
 ```
+- 401: `{ "error": "이메일 또는 비밀번호가 일치하지 않습니다." }`
 
-**응답** — 텍스트 분석과 동일한 형식
-
----
-
-### 4. 이미지 분석
-
-```
-POST /analyze/image
-Content-Type: multipart/form-data
-```
-
-**요청 Form-data**
-| 키 | 타입 | 설명 |
-|---|---|---|
-| `file` | File | 이미지 파일 (jpg, png 등, 최대 10MB) |
-
-**응답** — 텍스트 분석과 동일한 형식
-
----
-
-### 5. 분석 이력 목록
-
-```
-GET /history?page=0&size=10
-```
-
-**응답** — 페이징된 분석 결과 목록 (최신순)
-
----
-
-### 6. 분석 이력 단건 조회
-
-```
-GET /history/{id}
-```
-
----
-
-## 에러 응답 형식
-
-모든 에러는 아래 형식으로 반환됩니다.
-
+### 비밀번호 변경 (인증 필요)
+- `POST /password/change`
+- Headers: `Authorization: Bearer <jwt>` 또는 token 쿠키
+- Body
 ```json
-{
-  "error": "에러 메시지"
-}
+{ "currentPassword": "oldPass", "newPassword": "newPass123" }
 ```
+- 200: `{ "message": "비밀번호가 변경되었습니다." }`
+- 400/401: 에러 메시지 반환
 
-| HTTP 상태코드 | 상황 |
-|---|---|
-| `400` | 요청값 오류 (content 없음, 파일 없음 등) |
-| `500` | 분석 서버 통신 오류, 내부 오류 |
+### 이메일 인증 코드 발송
+- `POST /email/send-code`
+- Body
+```json
+{ "email": "user@example.com" }
+```
+- 200: `{ "message": "인증 코드가 이메일로 전송되었습니다.", "email": "user@example.com" }`
+- 400: `{ "error": "이미 가입된 이메일입니다." }`
+
+### 이메일 인증 코드 검증
+- `POST /email/verify-code`
+- Body
+```json
+{ "email": "user@example.com", "code": "123456" }
+```
+- 200: `{ "message": "이메일 인증이 완료되었습니다." }`
+- 400: `{ "error": "인증 코드가 일치하지 않습니다." }` 등
 
 ---
+## 콘텐츠 분석
+### 텍스트 분석
+- `POST /analyze/text`
+- Body: `{ "content": "분석할 텍스트" }`
+- 200: 분석 결과 JSON 반환
+- 400: `{ "error": "content가 비어있습니다." }`
 
-## [Spring Boot → FastAPI] 내부 통신
+### URL 분석
+- `POST /analyze/url`
+- Body: `{ "content": "https://example.com/article" }`
+- 200: 분석 결과 JSON 반환 (Python 서버가 URL 내용을 가져와 분석)
+- 400: `{ "error": "content가 비어있습니다." }`
 
-| 엔드포인트 | 용도 |
-|---|---|
-| `GET /health` | 분석 서버 상태 확인 |
-| `POST /analyze/text` | 텍스트/URL 분석 요청 |
-| `POST /analyze/image` | 이미지 분석 요청 |
+### 이미지 분석
+- `POST /analyze/image`
+- multipart/form-data
+  - `file`: 이미지(jpg, png, ≤10MB)
+- 200: 분석 결과 JSON 반환
+- 400: `{ "error": "파일이 비어있습니다." }`
+  - Python 서버 통신 실패 시 500 에러 응답
 
 ---
+## 히스토리 (인증 필요)
+### 목록 조회
+- `GET /history?page=0&size=10`
+- 200: 분석 내역 페이지 리스트
 
-## 전체 통신 흐름
+### 상세 조회
+- `GET /history/{id}`
+- 200: 단일 분석 내역
 
-```
-React (3000 or 5173)
-  │
-  │  POST /analyze/text
-  ▼
-Spring Boot (8080)
-  1. 요청 수신 및 유효성 검사
-  2. FastAPI로 분석 요청 전달
-  │
-  │  POST /analyze/text
-  ▼
-FastAPI (8000)
-  1. 텍스트 추출 (URL 크롤링 / OCR / 직접 입력)
-  2. 문장 분리 (kss)
-  3. 1차 규칙기반 엔진
-  4. 2차 KoBERT 모델
-  5. JSON 결과 반환
-  │
-  ▼
-Spring Boot (8080)
-  3. 결과 MySQL 저장
-  4. React에 응답 반환
-  │
-  ▼
-React — 결과 화면 표시
-```
+---
+## 메일(SMTP) 설정 가이드
+- 환경변수: `SMTP_HOST`(기본 smtp.gmail.com), `SMTP_PORT`(기본 587), `SMTP_USERNAME`, `SMTP_PASSWORD`
+- 타임아웃: `SMTP_CONNECTION_TIMEOUT` / `SMTP_TIMEOUT` / `SMTP_WRITETIMEOUT` (기본 5000ms)
+- TLS: `spring.mail.properties.mail.smtp.starttls.enable=true`, `SMTP_SSL_PROTOCOLS` 기본 `TLSv1.2`
+- Gmail 사용 시 앱 비밀번호 필요(보안 수준이 낮은 앱 허용 대신).
+- 네이버 메일 예시: `SMTP_HOST=smtp.naver.com`, `SMTP_PORT=587`, `SMTP_USERNAME=아이디@naver.com`, `SMTP_PASSWORD=네이버 앱비밀번호`, `SMTP_SSL_TRUST=smtp.naver.com`
+- 메일 제목: `[ADCheck] 이메일 인증 코드`, 내용에 6자리 코드와 10분 유효 시간 안내
