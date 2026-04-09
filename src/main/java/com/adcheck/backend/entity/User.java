@@ -55,4 +55,8 @@ public class User {
     public enum Provider {
         LOCAL, KAKAO, GOOGLE
     }
+
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
 }
