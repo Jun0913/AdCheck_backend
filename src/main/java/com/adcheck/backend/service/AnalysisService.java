@@ -70,8 +70,12 @@ public class AnalysisService {
             }
         };
 
+        HttpHeaders fileHeaders = new HttpHeaders();
+        fileHeaders.setContentType(MediaType.valueOf(file.getContentType() != null ? file.getContentType() : "image/jpeg"));
+        HttpEntity<ByteArrayResource> filePart = new HttpEntity<>(fileResource, fileHeaders);
+
         MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("file", fileResource);
+        body.add("file", filePart);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
