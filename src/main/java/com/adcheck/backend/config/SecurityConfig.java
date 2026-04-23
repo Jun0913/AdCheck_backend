@@ -39,6 +39,7 @@ public class SecurityConfig {
                 .requestMatchers("/analyze/**").permitAll()
                 .requestMatchers("/health").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
+                .requestMatchers("/history").authenticated()
                 .requestMatchers("/history/**").authenticated()
                 .anyRequest().authenticated()
             )

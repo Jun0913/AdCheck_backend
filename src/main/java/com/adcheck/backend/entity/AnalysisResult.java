@@ -44,6 +44,9 @@ public class AnalysisResult {
     @Column(columnDefinition = "TEXT")
     private String sentenceResultsJson;
 
+    @Column(nullable = false)
+    private boolean hiddenFromHistory = false;
+
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -60,6 +63,10 @@ public class AnalysisResult {
         this.summary = summary;
         this.sentenceResultsJson = sentenceResultsJson;
         this.createdAt = LocalDateTime.now();
+    }
+
+    public void hideFromHistory() {
+        this.hiddenFromHistory = true;
     }
 
     public enum InputType {
