@@ -6,6 +6,8 @@ import com.adcheck.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailAuthenticationException;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -53,7 +55,15 @@ public class EmailVerificationService {
         message.setSubject("[ADCheck] 이메일 인증 코드");
         message.setText(String.format("인증 코드: %s%n유효 시간: %d분%n잘못 신청하셨다면 이 메일을 무시하세요.",
                 code, CODE_EXPIRATION_MINUTES));
-        mailSender.send(message);
+        try {
+            mailSender.send(message);
+        } catch (MailAuthenticationException e) {
+            log.error("[EmailVerification] SMTP authentication failed. Check SMTP_USERNAME/SMTP_PASSWORD and Naver SMTP settings.", e);
+            throw new IllegalArgumentException("?? ??? ??????. ??? SMTP ???/? ????? SMTP ?? ??? ??????.");
+        } catch (MailException e) {
+            log.error("[EmailVerification] SMTP send failed.", e);
+            throw new IllegalArgumentException("?? ?? ??? ??????. SMTP ??? ??????.");
+        }
 
         log.info("[EmailVerification] code sent to {}", email);
         return code;
