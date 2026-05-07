@@ -22,6 +22,9 @@ public class SentenceResultDto {
     @JsonProperty("matched_keywords")
     private List<String> matchedKeywords;
 
+    @JsonProperty("matched_patterns")
+    private List<String> matchedPatterns;
+
     @JsonProperty("reason")
     private String reason;
 }
