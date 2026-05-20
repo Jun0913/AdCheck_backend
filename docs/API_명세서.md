@@ -2,7 +2,14 @@
 
 Base URL: `http://localhost:8080`
 응답 포맷: JSON(UTF-8)
-인증 방식: JWT (Authorization: Bearer <token> 또는 token 쿠키)
+인증 방식: JWT (Authorization: Bearer <token>)
+
+## 프론트 연동 메모
+- 백엔드 실제 엔드포인트는 모두 `http://<backend-host>:8080/...` 기준이다.
+- 프론트 개발 서버(Vite)에서는 `/api` 프록시를 써도 되지만, 배포 빌드에서는 프록시가 없으므로 `VITE_API_BASE_URL` 환경변수로 백엔드 주소를 직접 주입해야 한다.
+- 예시
+  - 로컬 Docker: `VITE_API_BASE_URL=http://localhost:8080`
+  - 리버스 프록시 도입 후: `VITE_API_BASE_URL=https://your-domain.com/api` 또는 프록시 구성에 맞는 공개 경로
 
 ---
 ## 공통 에러
@@ -72,13 +79,27 @@ Base URL: `http://localhost:8080`
 ## 콘텐츠 분석
 ### 텍스트 분석
 - `POST /analyze/text`
-- Body: `{ "content": "분석할 텍스트" }`
+- Body
+```json
+{ "content": "분석할 텍스트" }
+```
+- 프론트 구현에서는 아래처럼 `inputType`를 함께 보내도 정상 처리된다.
+```json
+{ "inputType": "text", "content": "분석할 텍스트" }
+```
 - 200: 분석 결과 JSON 반환
 - 400: `{ "error": "content가 비어있습니다." }`
 
 ### URL 분석
 - `POST /analyze/url`
-- Body: `{ "content": "https://example.com/article" }`
+- Body
+```json
+{ "content": "https://example.com/article" }
+```
+- 프론트 구현에서는 아래처럼 `inputType`를 함께 보내도 정상 처리된다.
+```json
+{ "inputType": "url", "content": "https://example.com/article" }
+```
 - 200: 분석 결과 JSON 반환 (Python 서버가 URL 내용을 가져와 분석)
 - 400: `{ "error": "content가 비어있습니다." }`
 
@@ -86,6 +107,7 @@ Base URL: `http://localhost:8080`
 - `POST /analyze/image`
 - multipart/form-data
   - `file`: 이미지(jpg, png, ≤10MB)
+  - `inputType=image`를 추가로 보내도 서버는 `file` 기준으로 처리한다.
 - 200: 분석 결과 JSON 반환
 - 400: `{ "error": "파일이 비어있습니다." }`
   - Python 서버 통신 실패 시 500 에러 응답
