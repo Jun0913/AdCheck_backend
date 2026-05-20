@@ -38,7 +38,6 @@ public class SecurityConfig {
                 .requestMatchers("/email/send-code", "/email/verify-code").permitAll()
                 .requestMatchers("/analyze/**").permitAll()
                 .requestMatchers("/health").permitAll()
-                .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/history").authenticated()
                 .requestMatchers("/history/**").authenticated()
                 .anyRequest().authenticated()
