@@ -11,13 +11,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
+
 
 @Slf4j
 @Service
@@ -31,11 +36,6 @@ public class AnalysisService {
     @Value("${python.server.url}")
     private String pythonServerUrl;
 
-    // ──────────────────────────────────────────
-    // 텍스트 / URL 분석
-    // user: 로그인 상태면 User 객체, 비로그인이면 null
-    // ──────────────────────────────────────────
-
     public AnalyzeResponseDto analyzeText(String inputType, String content, User user) {
         String url = pythonServerUrl + "/analyze/text";
         AnalyzeRequestDto requestDto = new AnalyzeRequestDto(inputType, content);
@@ -44,21 +44,24 @@ public class AnalysisService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         HttpEntity<AnalyzeRequestDto> entity = new HttpEntity<>(requestDto, headers);
 
+        AnalyzeResponseDto result;
         try {
             ResponseEntity<AnalyzeResponseDto> response =
                     restTemplate.postForEntity(url, entity, AnalyzeResponseDto.class);
-            AnalyzeResponseDto result = response.getBody();
-            saveResult(user, AnalysisResult.InputType.valueOf(inputType.toUpperCase()), content, result);
-            return result;
+            result = response.getBody();
         } catch (RestClientException e) {
-            log.error("Python 서버 통신 오류 (analyzeText): {}", e.getMessage());
+            log.error("Python 서버 통신 오류 (analyzeText): {}", e.getMessage(), e);
             throw new RuntimeException("분석 서버와 통신할 수 없습니다.", e);
         }
-    }
 
-    // ──────────────────────────────────────────
-    // 이미지 분석
-    // ──────────────────────────────────────────
+        try {
+            saveResult(user, AnalysisResult.InputType.valueOf(inputType.toUpperCase()), content, result);
+        } catch (Exception e) {
+            log.error("분석 결과 저장 오류 (analyzeText): {}", e.getMessage(), e);
+        }
+
+        return result;
+    }
 
     public AnalyzeResponseDto analyzeImage(MultipartFile file, User user) throws Exception {
         String url = pythonServerUrl + "/analyze/image";
@@ -77,21 +80,24 @@ public class AnalysisService {
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         HttpEntity<MultiValueMap<String, Object>> entity = new HttpEntity<>(body, headers);
 
+        AnalyzeResponseDto result;
         try {
             ResponseEntity<AnalyzeResponseDto> response =
                     restTemplate.postForEntity(url, entity, AnalyzeResponseDto.class);
-            AnalyzeResponseDto result = response.getBody();
-            saveResult(user, AnalysisResult.InputType.IMAGE, file.getOriginalFilename(), result);
-            return result;
+            result = response.getBody();
         } catch (RestClientException e) {
-            log.error("Python 서버 통신 오류 (analyzeImage): {}", e.getMessage());
+            log.error("Python 서버 통신 오류 (analyzeImage): {}", e.getMessage(), e);
             throw new RuntimeException("이미지 분석 서버와 통신할 수 없습니다.", e);
         }
-    }
 
-    // ──────────────────────────────────────────
-    // Python 서버 헬스체크
-    // ──────────────────────────────────────────
+        try {
+            saveResult(user, AnalysisResult.InputType.IMAGE, file.getOriginalFilename(), result);
+        } catch (Exception e) {
+            log.error("분석 결과 저장 오류 (analyzeImage): {}", e.getMessage(), e);
+        }
+
+        return result;
+    }
 
     public boolean checkPythonServerHealth() {
         try {
@@ -104,15 +110,12 @@ public class AnalysisService {
         }
     }
 
-    // ──────────────────────────────────────────
-    // DB 저장
-    // user == null 이면 비로그인 분석 (통계용으로는 저장, user_id = null)
-    // user != null 이면 로그인 분석 (내 이력에서 조회 가능)
-    // ──────────────────────────────────────────
-
     private void saveResult(User user, AnalysisResult.InputType inputType,
                             String inputContent, AnalyzeResponseDto result) {
-        if (result == null) return;
+        if (result == null) {
+            return;
+        }
+
         try {
             String sentenceJson = objectMapper.writeValueAsString(result.getSentenceResults());
             AnalysisResult entity = AnalysisResult.builder()
@@ -126,11 +129,11 @@ public class AnalysisService {
                     .sentenceResultsJson(sentenceJson)
                     .build();
             analysisResultRepository.save(entity);
-            log.info("분석 결과 저장 (user={}, inputType={}, level={})",
+            log.info("분석 결과 저장(user={}, inputType={}, level={})",
                     user != null ? user.getId() : "비로그인",
                     inputType, result.getOverallSuspicionLevel());
         } catch (JsonProcessingException e) {
-            log.error("분석 결과 저장 실패: {}", e.getMessage());
+            log.error("분석 결과 JSON 직렬화 실패: {}", e.getMessage(), e);
         }
     }
 }

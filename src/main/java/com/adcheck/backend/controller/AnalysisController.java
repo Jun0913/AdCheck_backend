@@ -8,22 +8,16 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
-/**
- * 프론트엔드 ↔ Spring Boot 분석 엔드포인트
- *
- * POST /analyze/text   — 텍스트 분석 (비로그인 가능)
- * POST /analyze/url    — URL 분석 (비로그인 가능)
- * POST /analyze/image  — 이미지 분석 (비로그인 가능)
- * GET  /health         — 서버 상태 확인
- *
- * 비로그인: user == null → 통계용으로만 저장 (user_id = null)
- * 로그인:   user 연결 → 내 이력에서 조회 가능
- */
+
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -49,7 +43,7 @@ public class AnalysisController {
             AnalyzeResponseDto result = analysisService.analyzeText("text", content, getCurrentUser());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            log.error("텍스트 분석 실패: {}", e.getMessage());
+            log.error("텍스트 분석 실패: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "분석 서버와 통신 중 오류가 발생했습니다."));
         }
@@ -65,7 +59,7 @@ public class AnalysisController {
             AnalyzeResponseDto result = analysisService.analyzeText("url", content, getCurrentUser());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            log.error("URL 분석 실패: {}", e.getMessage());
+            log.error("URL 분석 실패: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "URL 분석 중 오류가 발생했습니다."));
         }
@@ -80,7 +74,7 @@ public class AnalysisController {
             AnalyzeResponseDto result = analysisService.analyzeImage(file, getCurrentUser());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            log.error("이미지 분석 실패: {}", e.getMessage());
+            log.error("이미지 분석 실패: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", "이미지 분석 중 오류가 발생했습니다."));
         }
@@ -91,7 +85,7 @@ public class AnalysisController {
         boolean pythonOk = analysisService.checkPythonServerHealth();
         return ResponseEntity.ok(Map.of(
                 "status", "ok",
-                "service", "딱 걸렸어! Spring Boot 서버",
+                "service", "광고체크 Spring Boot 서버",
                 "python_server", pythonOk ? "ok" : "unreachable"
         ));
     }
