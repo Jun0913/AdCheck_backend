@@ -130,34 +130,6 @@ const analyzeText = async (content) => {
 
 ---
 
-### 3. URL 분석
-
-```
-POST /analyze/url
-Content-Type: application/json
-```
-
-**요청**
-
-```json
-{
-  "content": "https://example.com/product"
-}
-```
-
-**응답** — 텍스트 분석과 동일한 형식
-
-**React 예시**
-
-```js
-const analyzeUrl = async (url) => {
-  const res = await axios.post('http://localhost:8080/analyze/url', { content: url });
-  return res.data;
-};
-```
-
----
-
 ### 4. 이미지 분석
 
 ```

@@ -90,19 +90,6 @@ Base URL: `http://localhost:8080`
 - 200: 분석 결과 JSON 반환
 - 400: `{ "error": "content가 비어있습니다." }`
 
-### URL 분석
-- `POST /analyze/url`
-- Body
-```json
-{ "content": "https://example.com/article" }
-```
-- 프론트 구현에서는 아래처럼 `inputType`를 함께 보내도 정상 처리된다.
-```json
-{ "inputType": "url", "content": "https://example.com/article" }
-```
-- 200: 분석 결과 JSON 반환 (Python 서버가 URL 내용을 가져와 분석)
-- 400: `{ "error": "content가 비어있습니다." }`
-
 ### 이미지 분석
 - `POST /analyze/image`
 - multipart/form-data
