@@ -23,7 +23,6 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -36,9 +35,9 @@ public class AnalysisService {
     @Value("${python.server.url}")
     private String pythonServerUrl;
 
-    public AnalyzeResponseDto analyzeText(String inputType, String content, User user) {
+    public AnalyzeResponseDto analyzeText(String content, User user) {
         String url = pythonServerUrl + "/analyze/text";
-        AnalyzeRequestDto requestDto = new AnalyzeRequestDto(inputType, content);
+        AnalyzeRequestDto requestDto = new AnalyzeRequestDto(content);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -55,7 +54,7 @@ public class AnalysisService {
         }
 
         try {
-            saveResult(user, AnalysisResult.InputType.valueOf(inputType.toUpperCase()), content, result);
+            saveResult(user, AnalysisResult.InputType.TEXT, content, result);
         } catch (Exception e) {
             log.error("분석 결과 저장 오류 (analyzeText): {}", e.getMessage(), e);
         }
@@ -129,7 +128,7 @@ public class AnalysisService {
                     .sentenceResultsJson(sentenceJson)
                     .build();
             analysisResultRepository.save(entity);
-            log.info("분석 결과 저장(user={}, inputType={}, level={})",
+            log.info("분석 결과 저장 user={}, inputType={}, level={})",
                     user != null ? user.getId() : "비로그인",
                     inputType, result.getOverallSuspicionLevel());
         } catch (JsonProcessingException e) {

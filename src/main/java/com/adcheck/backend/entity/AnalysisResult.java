@@ -24,7 +24,7 @@ public class AnalysisResult {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private InputType inputType;  // TEXT, URL, IMAGE
+    private InputType inputType;  // TEXT, IMAGE
 
     @Column(columnDefinition = "TEXT")
     private String inputContent;
@@ -70,6 +70,6 @@ public class AnalysisResult {
     }
 
     public enum InputType {
-        TEXT, URL, IMAGE
+        TEXT, IMAGE
     }
 }

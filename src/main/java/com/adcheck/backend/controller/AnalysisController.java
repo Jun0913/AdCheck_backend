@@ -3,6 +3,7 @@ package com.adcheck.backend.controller;
 import com.adcheck.backend.dto.AnalyzeResponseDto;
 import com.adcheck.backend.entity.User;
 import com.adcheck.backend.service.AnalysisService;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -14,9 +15,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.util.Map;
-
 
 @Slf4j
 @RestController
@@ -40,28 +38,12 @@ public class AnalysisController {
             return ResponseEntity.badRequest().body(Map.of("error", "content가 비어있습니다."));
         }
         try {
-            AnalyzeResponseDto result = analysisService.analyzeText("text", content, getCurrentUser());
+            AnalyzeResponseDto result = analysisService.analyzeText(content, getCurrentUser());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("텍스트 분석 실패: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "분석 서버와 통신 중 오류가 발생했습니다."));
-        }
-    }
-
-    @PostMapping("/analyze/url")
-    public ResponseEntity<?> analyzeUrl(@RequestBody Map<String, String> body) {
-        String content = body.get("content");
-        if (content == null || content.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "content가 비어있습니다."));
-        }
-        try {
-            AnalyzeResponseDto result = analysisService.analyzeText("url", content, getCurrentUser());
-            return ResponseEntity.ok(result);
-        } catch (Exception e) {
-            log.error("URL 분석 실패: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError()
-                    .body(Map.of("error", "URL 분석 중 오류가 발생했습니다."));
+                    .body(Map.of("error", "분석 서버 통신 중 오류가 발생했습니다."));
         }
     }
 
